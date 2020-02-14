@@ -1,4 +1,4 @@
-import React, { useState, useEffect, } from 'react';
+import React, { useState, useEffect,useCallback } from 'react';
 import {
   View,
   Text,
@@ -20,17 +20,25 @@ import Colors from '../../constants/Color';
 
 const ProductOverviewScreen = props =>{
     const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState();
     const products = useSelector(state => state.products.availableProducts);
     const dispatch = useDispatch();
 
-    useEffect(() => {
-        const loadProducts = async () => {
-            setIsLoading(true);
+
+    const loadProducts = useCallback(async () => {
+        setError(null);
+        setIsLoading(true);
+        try {
             await dispatch(productActions.fetchProducts());
-            setIsLoading(false);
-        };
+        } catch (err) {
+            setError(err.message);
+        }
+        setIsLoading(false);
+    }, [dispatch, setIsLoading, setError]);
+
+    useEffect(() => {
         loadProducts();
-    }, [dispatch]);
+    }, [dispatch, loadProducts]);
 
     const selectItemHandler = (id, title) => {
         props.navigation.navigate('ProductDetail', { 
@@ -39,11 +47,32 @@ const ProductOverviewScreen = props =>{
         });
     };
 
+    if (error) {
+        return (
+            <View style={styles.centered}>
+                <Text>An Error Occured!</Text>
+                <Button 
+                    title="Try again" 
+                    onPress={loadProducts} 
+                    color={Colors.primary}
+                />
+            </View>
+            );
+    }
+
     if (isLoading) {
         return (
         <View style={styles.centered}>
             <ActivityIndicator size="large" color={Colors.primary} />
         </View>
+        );
+    }
+
+    if (!isLoading && products.length === 0){
+        return (
+            <View style={styles.centered}>
+                <Text>No products found. Maybe start adding some!</Text>
+            </View>
         );
     }
 
